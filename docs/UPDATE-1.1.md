@@ -25,7 +25,8 @@ Country/currency names come from platform locale data. Calling codes are a bundl
 - Actual Android migration SQL executed against populated legacy SQLite tables: passed; existing values preserved and new fields can be written/read.
 - Native Android build attempted locally: blocked because the host Java binary cannot load `libjli.so`.
 - iOS native build unavailable locally because this host has no Xcode.
-- GitHub Actions workflow added for Android unit tests/debug build and unsigned iOS Simulator build. Consult the workflow results; configuration alone does not establish a passing build.
+- GitHub Actions run [40163282092](https://github.com/alainbad/invoice-mini/actions/runs/40163282092), source commit `24983cc84e4e1f7557e17ffd747f053b77988d36`: Android unit tests and debug APK build PASSED; unsigned iOS Simulator build PASSED. The run includes an `android-debug-apk` artifact for testing, not store submission.
+- The first Android CI attempt failed during SDK setup because the setup action requested the obsolete `tools` package. The workflow now requests `platform-tools`; the subsequent run passed.
 - No signed store artifacts have been produced or submitted.
 
 ## Required device/release checks

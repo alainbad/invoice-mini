@@ -6,7 +6,7 @@ Offline invoicing app for freelancers and small businesses. Separate native apps
 
 - iOS: live on the App Store, according to the supplied project summary. Swift / SwiftUI / SwiftData; minimum iOS 17. Bundle ID: `com.alanbadrain.Invoice-Mini`.
 - Android: production release 1.0 confirmed by the owner's Play Console screenshot: Available on Play, 100% rollout, 173 countries/regions. This supersedes the supplied summary's older closed-testing status. Package: `com.alanbadrain.invoicemini`.
-- Repository: supplied native source imported under `ios/` and `android/`. Version 1.1 feature changes are implemented in source; see [update status and validation](docs/UPDATE-1.1.md). Signed builds and store submission remain pending.
+- Repository: supplied native source imported under `ios/` and `android/`. Version 1.1 feature changes are implemented; Android unit tests/debug build and the iOS Simulator build pass; see [update status and validation](docs/UPDATE-1.1.md). Signed builds and store submission remain pending.
 
 ## Imported source
 
