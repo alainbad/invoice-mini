@@ -212,16 +212,16 @@ fun InvoiceFormScreen(
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                Text("Business Details", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(businessPhone, { businessPhone = it }, label = { Text("Business Mobile Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
                 OutlinedTextField(businessTaxNumber, { businessTaxNumber = it }, label = { Text("Tax Registration Number (optional)") }, modifier = Modifier.fillMaxWidth())
-                Text("Business Details", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(businessName, { businessName = it }, label = { Text("Business Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(businessEmail, { businessEmail = it }, label = { Text("Business Email") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(businessAddress, { businessAddress = it }, label = { Text("Business Address") }, modifier = Modifier.fillMaxWidth())
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                OutlinedTextField(clientPhone, { clientPhone = it }, label = { Text("Client Mobile Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
                 Text("Client Details", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(clientPhone, { clientPhone = it }, label = { Text("Client Mobile Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
                 OutlinedTextField(clientName, { clientName = it }, label = { Text("Client Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(clientEmail, { clientEmail = it }, label = { Text("Client Email") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(clientAddress, { clientAddress = it }, label = { Text("Client Address") }, modifier = Modifier.fillMaxWidth())
