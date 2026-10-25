@@ -1,5 +1,9 @@
 package com.alanbadrain.invoicemini.ui.screens
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.alanbadrain.invoicemini.ui.components.SearchSelection
+import com.alanbadrain.invoicemini.util.InternationalOptions
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -53,22 +57,27 @@ fun BusinessProfileScreen(viewModel: InvoiceViewModel, onBack: () -> Unit) {
     var businessName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var countryCode by remember { mutableStateOf("") }
+    var callingCode by remember { mutableStateOf("") }
+    var taxNumber by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var logoPath by remember { mutableStateOf<String?>(null) }
     var savedMessage by remember { mutableStateOf<String?>(null) }
     var loaded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(profile, loaded) {
-        if (!loaded) {
-            profile?.let {
-                businessName = it.businessName
-                email = it.email ?: ""
-                address = it.address ?: ""
-                phone = it.phone ?: ""
-                logoPath = it.logoUri
-            }
-            loaded = true
+    LaunchedEffect(Unit) {
+        val stored = viewModel.getBusinessProfileOnce()
+        stored?.let {
+            businessName = it.businessName
+            email = it.email ?: ""
+            address = it.address ?: ""
+            phone = it.phone ?: ""
+            logoPath = it.logoUri
+            countryCode = it.countryCode ?: ""
+            callingCode = it.callingCode ?: ""
+            taxNumber = it.taxNumber ?: ""
         }
+        loaded = true
     }
 
     val pickMedia = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -89,6 +98,7 @@ fun BusinessProfileScreen(viewModel: InvoiceViewModel, onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -132,15 +142,24 @@ fun BusinessProfileScreen(viewModel: InvoiceViewModel, onBack: () -> Unit) {
         androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
         OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
         androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+        SearchSelection("Country", countryCode, InternationalOptions.countries) {
+            countryCode = it
+            callingCode = InternationalOptions.callingCodes[it] ?: ""
+        }
+        OutlinedTextField(callingCode, { callingCode = it }, label = { Text("Calling Code") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(taxNumber, { taxNumber = it }, label = { Text("Tax Registration Number (optional)") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth())
 
         androidx.compose.foundation.layout.Spacer(Modifier.size(16.dp))
 
         savedMessage?.let { Text(it, color = androidx.compose.ui.graphics.Color(0xFF2E9E4A)) }
 
-        Button(onClick = {
+        Button(enabled = loaded, onClick = {
             viewModel.saveBusinessProfile(
                 BusinessProfileEntity(
+                    countryCode = countryCode.ifBlank { null },
+                    callingCode = callingCode.ifBlank { null },
+                    taxNumber = taxNumber.ifBlank { null },
                     id = 1,
                     businessName = businessName,
                     email = email.ifBlank { null },

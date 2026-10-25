@@ -6,11 +6,11 @@ Offline invoicing app for freelancers and small businesses. Separate native apps
 
 - iOS: live on the App Store, according to the supplied project summary. Swift / SwiftUI / SwiftData; minimum iOS 17. Bundle ID: `com.alanbadrain.Invoice-Mini`.
 - Android: production release 1.0 confirmed by the owner's Play Console screenshot: Available on Play, 100% rollout, 173 countries/regions. This supersedes the supplied summary's older closed-testing status. Package: `com.alanbadrain.invoicemini`.
-- Repository: initialized with this handoff. The released application source has not yet been supplied here. No feature implementation, migration, compilation, signing, or update submission has been completed.
+- Repository: supplied native source imported under `ios/` and `android/`. Version 1.1 feature changes are implemented in source; see [update status and validation](docs/UPDATE-1.1.md). Signed builds and store submission remain pending.
 
-## Source needed
+## Imported source
 
-Import the current released projects, preferably under `ios/` and `android/`, including their build configuration and dependency locks. The supplied summary identifies `InvoiceMini-verified.zip` (iOS) and `InvoiceMiniAndroid.zip` (Android); verify that each matches the released build before import. Prefer the latest local projects if those archives predate release fixes.
+The owner supplied `Invoice Mini.zip` (iOS) and `Invoice Mini(1).zip` (Android). The main native projects are imported here, excluding duplicate older source copies and generated build files. Version IDs match the supplied launch evidence, but source equivalence to published binaries is not independently verified.
 
 Keep signing keys, certificates, passwords, local configuration, provisioning profiles, and customer data out of Git. Retain the existing store identities and signing setup for updates.
 

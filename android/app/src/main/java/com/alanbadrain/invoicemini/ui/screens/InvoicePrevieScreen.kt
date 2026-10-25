@@ -52,6 +52,9 @@ fun InvoicePreviewScreen(invoiceId: String, viewModel: InvoiceViewModel, onBack:
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var previewBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
+    var pageIndex by remember { mutableStateOf(0) }
+    var pageCount by remember { mutableStateOf(0) }
+
     suspend fun regenerate() {
         val inv = viewModel.getInvoice(invoiceId) ?: return
         invoiceWithItems = inv
@@ -61,7 +64,9 @@ fun InvoicePreviewScreen(invoiceId: String, viewModel: InvoiceViewModel, onBack:
         if (file != null) {
             val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
             val renderer = PdfRenderer(pfd)
-            val page = renderer.openPage(0)
+            pageCount = renderer.pageCount
+            pageIndex = pageIndex.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+            val page = renderer.openPage(pageIndex)
             val bitmap = android.graphics.Bitmap.createBitmap(page.width * 2, page.height * 2, android.graphics.Bitmap.Config.ARGB_8888)
             bitmap.eraseColor(android.graphics.Color.WHITE)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -72,7 +77,7 @@ fun InvoicePreviewScreen(invoiceId: String, viewModel: InvoiceViewModel, onBack:
         }
     }
 
-    LaunchedEffect(invoiceId) { regenerate() }
+    LaunchedEffect(invoiceId, pageIndex) { regenerate() }
 
     val inv = invoiceWithItems
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -91,11 +96,18 @@ fun InvoicePreviewScreen(invoiceId: String, viewModel: InvoiceViewModel, onBack:
 
             Text(inv.invoice.invoiceNumber, style = MaterialTheme.typography.titleMedium)
             Text("Client: ${inv.invoice.clientName}")
-            Text("Total: ${CurrencyFormatter.format(totals.grandTotal)}", style = MaterialTheme.typography.titleMedium)
+            Text("Total: ${CurrencyFormatter.format(totals.grandTotal, inv.invoice.currencyCode)}", style = MaterialTheme.typography.titleMedium)
             StatusBadge(status)
 
             androidx.compose.foundation.layout.Spacer(Modifier.size(16.dp))
 
+            if (pageCount > 1) {
+                Row {
+                    androidx.compose.material3.TextButton(enabled = pageIndex > 0, onClick = { pageIndex-- }) { Text("Previous") }
+                    Text("Page ${pageIndex + 1} of $pageCount")
+                    androidx.compose.material3.TextButton(enabled = pageIndex + 1 < pageCount, onClick = { pageIndex++ }) { Text("Next") }
+                }
+            }
             previewBitmap?.let { bmp ->
                 Image(bitmap = bmp.asImageBitmap(), contentDescription = "PDF preview", modifier = Modifier.fillMaxWidth())
             }

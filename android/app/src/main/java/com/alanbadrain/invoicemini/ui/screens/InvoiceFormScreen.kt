@@ -38,6 +38,9 @@ import com.alanbadrain.invoicemini.data.DiscountType
 import com.alanbadrain.invoicemini.data.InvoiceEntity
 import com.alanbadrain.invoicemini.data.InvoiceStatus
 import com.alanbadrain.invoicemini.data.LineItemEntity
+import com.alanbadrain.invoicemini.ui.components.SearchSelection
+import com.alanbadrain.invoicemini.ui.components.InvoiceImageField
+import com.alanbadrain.invoicemini.util.InternationalOptions
 import com.alanbadrain.invoicemini.util.CurrencyFormatter
 import com.alanbadrain.invoicemini.util.InvoiceCalculations
 import kotlinx.coroutines.launch
@@ -61,6 +64,12 @@ fun InvoiceFormScreen(
     var invoiceNumber by remember { mutableStateOf("") }
     var invoiceDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var dueDateMillis by remember { mutableStateOf(System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000) }
+    var businessPhone by remember { mutableStateOf("") }
+    var clientPhone by remember { mutableStateOf("") }
+    var businessTaxNumber by remember { mutableStateOf("") }
+    var currencyCode by remember { mutableStateOf("") }
+    var stampPath by remember { mutableStateOf("") }
+    var signaturePath by remember { mutableStateOf("") }
     var businessName by remember { mutableStateOf("") }
     var businessEmail by remember { mutableStateOf("") }
     var businessAddress by remember { mutableStateOf("") }
@@ -90,6 +99,12 @@ fun InvoiceFormScreen(
                     invoiceNumber = existing.invoice.invoiceNumber
                     invoiceDateMillis = existing.invoice.invoiceDateMillis
                     dueDateMillis = existing.invoice.dueDateMillis
+                    businessPhone = existing.invoice.businessPhone ?: ""
+                    clientPhone = existing.invoice.clientPhone ?: ""
+                    businessTaxNumber = existing.invoice.businessTaxNumber ?: ""
+                    currencyCode = existing.invoice.currencyCode ?: ""
+                    stampPath = existing.invoice.stampPath ?: ""
+                    signaturePath = existing.invoice.signaturePath ?: ""
                     businessName = existing.invoice.businessName
                     businessEmail = existing.invoice.businessEmail ?: ""
                     businessAddress = existing.invoice.businessAddress ?: ""
@@ -106,12 +121,15 @@ fun InvoiceFormScreen(
                     items.addAll(existing.items)
                 }
             } else {
+                currencyCode = runCatching { java.util.Currency.getInstance(Locale.getDefault()).currencyCode }.getOrDefault("USD")
                 invoiceNumber = viewModel.generateNextInvoiceNumber()
                 val profile = viewModel.getBusinessProfileOnce()
                 if (profile != null) {
                     businessName = profile.businessName
                     businessEmail = profile.email ?: ""
                     businessAddress = profile.address ?: ""
+                    businessPhone = if (profile.phone?.trim()?.startsWith("+") == true) profile.phone.orEmpty() else listOfNotNull(profile.callingCode, profile.phone).filter { it.isNotBlank() }.joinToString(" ")
+                    businessTaxNumber = profile.taxNumber ?: ""
                 }
             }
             loaded = true
@@ -123,6 +141,12 @@ fun InvoiceFormScreen(
     )
 
     fun buildEntity(): InvoiceEntity = InvoiceEntity(
+        businessPhone = businessPhone.ifBlank { null },
+        clientPhone = clientPhone.ifBlank { null },
+        businessTaxNumber = businessTaxNumber.ifBlank { null },
+        currencyCode = currencyCode.ifBlank { null },
+        stampPath = stampPath.ifBlank { null },
+        signaturePath = signaturePath.ifBlank { null },
         id = actualId,
         invoiceNumber = invoiceNumber,
         invoiceDateMillis = invoiceDateMillis,
@@ -178,6 +202,7 @@ fun InvoiceFormScreen(
 
         LazyColumn(modifier = Modifier.weight(1f, fill = true)) {
             item {
+                SearchSelection("Currency", currencyCode, InternationalOptions.currencies) { currencyCode = it }
                 Text("Invoice Number: $invoiceNumber", modifier = Modifier.padding(vertical = 4.dp))
                 OutlinedButton(onClick = { pickDate(invoiceDateMillis) { invoiceDateMillis = it } }) {
                     Text("Invoice Date: ${dateFormat.format(invoiceDateMillis)}")
@@ -187,12 +212,15 @@ fun InvoiceFormScreen(
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                OutlinedTextField(businessPhone, { businessPhone = it }, label = { Text("Business Mobile Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
+                OutlinedTextField(businessTaxNumber, { businessTaxNumber = it }, label = { Text("Tax Registration Number (optional)") }, modifier = Modifier.fillMaxWidth())
                 Text("Business Details", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(businessName, { businessName = it }, label = { Text("Business Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(businessEmail, { businessEmail = it }, label = { Text("Business Email") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(businessAddress, { businessAddress = it }, label = { Text("Business Address") }, modifier = Modifier.fillMaxWidth())
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                OutlinedTextField(clientPhone, { clientPhone = it }, label = { Text("Client Mobile Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
                 Text("Client Details", style = MaterialTheme.typography.titleMedium)
                 OutlinedTextField(clientName, { clientName = it }, label = { Text("Client Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(clientEmail, { clientEmail = it }, label = { Text("Client Email") }, modifier = Modifier.fillMaxWidth())
@@ -212,10 +240,10 @@ fun InvoiceFormScreen(
                         editingItem = item; showItemDialog = true
                     }) {
                         Text(item.itemDescription.ifBlank { "Untitled item" })
-                        Text("%.2f x %s".format(item.quantity, CurrencyFormatter.format(item.unitPrice)),
+                        Text("%.2f x %s".format(item.quantity, CurrencyFormatter.format(item.unitPrice, currencyCode.ifBlank { null })),
                             style = MaterialTheme.typography.labelSmall)
                     }
-                    Text(CurrencyFormatter.format(item.total))
+                    Text(CurrencyFormatter.format(item.total, currencyCode.ifBlank { null }))
                     TextButton(onClick = { items.remove(item) }) { Text("✕") }
                 }
             }
@@ -244,12 +272,14 @@ fun InvoiceFormScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 Text("Totals", style = MaterialTheme.typography.titleMedium)
                 val totals = currentTotals()
-                Text("Subtotal: ${CurrencyFormatter.format(totals.subtotal)}")
-                Text("Discount: -${CurrencyFormatter.format(totals.discount)}")
-                Text("Tax: ${CurrencyFormatter.format(totals.taxAmount)}")
-                Text("Grand Total: ${CurrencyFormatter.format(totals.grandTotal)}", style = MaterialTheme.typography.titleMedium)
+                Text("Subtotal: ${CurrencyFormatter.format(totals.subtotal, currencyCode.ifBlank { null })}")
+                Text("Discount: -${CurrencyFormatter.format(totals.discount, currencyCode.ifBlank { null })}")
+                Text("Tax: ${CurrencyFormatter.format(totals.taxAmount, currencyCode.ifBlank { null })}")
+                Text("Grand Total: ${CurrencyFormatter.format(totals.grandTotal, currencyCode.ifBlank { null })}", style = MaterialTheme.typography.titleMedium)
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                InvoiceImageField("Digital Stamp", stampPath) { stampPath = it }
+                InvoiceImageField("Digital Signature", signaturePath) { signaturePath = it }
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
 
                 errorMessage?.let {

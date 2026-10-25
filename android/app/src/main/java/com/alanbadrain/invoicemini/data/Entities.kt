@@ -12,6 +12,9 @@ data class BusinessProfileEntity(
     val email: String? = null,
     val address: String? = null,
     val phone: String? = null,
+    val countryCode: String? = null,
+    val callingCode: String? = null,
+    val taxNumber: String? = null,
     val logoUri: String? = null
 )
 
@@ -21,6 +24,12 @@ data class InvoiceEntity(
     val invoiceNumber: String,
     val invoiceDateMillis: Long,
     val dueDateMillis: Long,
+    val businessPhone: String? = null,
+    val clientPhone: String? = null,
+    val businessTaxNumber: String? = null,
+    val currencyCode: String? = null,
+    val stampPath: String? = null,
+    val signaturePath: String? = null,
     val businessName: String = "",
     val businessEmail: String? = null,
     val businessAddress: String? = null,

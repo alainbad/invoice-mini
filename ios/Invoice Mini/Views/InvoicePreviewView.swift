@@ -21,7 +21,7 @@ struct InvoicePreviewView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(invoice.invoiceNumber).font(.headline)
                         Text("Client: \(invoice.clientName)")
-                        Text("Total: \(CurrencyFormatter.formatCurrency(invoice.totals.grandTotal))")
+                        Text("Total: \(CurrencyFormatter.formatCurrency(invoice.totals.grandTotal, code: invoice.currencyCode))")
                             .font(.title3.bold())
                         StatusBadge(status: invoice.status)
                     }

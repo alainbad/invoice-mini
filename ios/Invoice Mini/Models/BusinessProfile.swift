@@ -8,6 +8,8 @@ final class BusinessProfile {
     var address: String?
     var phone: String?
     var taxNumber: String?
+    var countryCode: String?
+    var callingCode: String?
     var logoData: Data?
 
     init(

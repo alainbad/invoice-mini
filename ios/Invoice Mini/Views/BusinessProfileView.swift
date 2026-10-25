@@ -10,6 +10,9 @@ struct BusinessProfileView: View {
     @State private var email = ""
     @State private var address = ""
     @State private var phone = ""
+    @State private var countryCode = ""
+    @State private var callingCode = ""
+    @State private var taxNumber = ""
     @State private var logoData: Data?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var savedMessage: String?
@@ -56,6 +59,12 @@ struct BusinessProfileView: View {
                     .focused($focusedField, equals: .email)
                 TextField("Address", text: $address)
                     .focused($focusedField, equals: .address)
+                SelectionField(title: "Country", value: Binding(get: { countryCode }, set: { code in
+                    countryCode = code
+                    callingCode = InternationalOptions.callingCodes[code] ?? ""
+                }), options: InternationalOptions.countries)
+                TextField("Calling Code", text: $callingCode).keyboardType(.phonePad)
+                TextField("Tax Registration Number (optional)", text: $taxNumber)
                 TextField("Phone", text: $phone)
                     .keyboardType(.phonePad)
                     .focused($focusedField, equals: .phone)
@@ -97,6 +106,9 @@ struct BusinessProfileView: View {
         address = profile.address ?? ""
         phone = profile.phone ?? ""
         logoData = profile.logoData
+        countryCode = profile.countryCode ?? ""
+        callingCode = profile.callingCode ?? ""
+        taxNumber = profile.taxNumber ?? ""
     }
 
     private func save() {
@@ -106,10 +118,13 @@ struct BusinessProfileView: View {
         profile.address = address.isEmpty ? nil : address
         profile.phone = phone.isEmpty ? nil : phone
         profile.logoData = logoData
+        profile.countryCode = countryCode.isEmpty ? nil : countryCode
+        profile.callingCode = callingCode.isEmpty ? nil : callingCode
+        profile.taxNumber = taxNumber.isEmpty ? nil : taxNumber
         if profiles.isEmpty {
             modelContext.insert(profile)
         }
-        try? modelContext.save()
-        savedMessage = "Saved"
+        do { try modelContext.save(); savedMessage = "Saved" }
+        catch { savedMessage = "Unable to save your profile. Please try again." }
     }
 }

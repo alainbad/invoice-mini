@@ -4,6 +4,7 @@ struct LineItemEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     let item: LineItem?
+    var currencyCode: String? = nil
     let onSave: (LineItem) -> Void
 
     @State private var itemDescription: String = ""
@@ -31,7 +32,7 @@ struct LineItemEditorView: View {
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                     }
-                    LabeledContent("Total", value: CurrencyFormatter.formatCurrency(total))
+                    LabeledContent("Total", value: CurrencyFormatter.formatCurrency(total, code: currencyCode))
                         .font(.headline)
                 }
             }

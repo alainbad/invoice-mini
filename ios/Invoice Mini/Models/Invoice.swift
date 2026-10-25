@@ -3,6 +3,11 @@ import SwiftData
 
 @Model
 final class Invoice {
+    var businessPhone: String?
+    var clientPhone: String?
+    var currencyCode: String?
+    var stampData: Data?
+    var signatureData: Data?
     var id: UUID
     var invoiceNumber: String
     var invoiceDate: Date

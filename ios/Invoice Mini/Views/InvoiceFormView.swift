@@ -27,12 +27,15 @@ struct InvoiceFormView: View {
     var body: some View {
         Form {
             Section("Invoice Details") {
+                SelectionField(title: "Currency", value: Binding(get: { invoice.currencyCode ?? Locale.current.currency?.identifier ?? "USD" }, set: { invoice.currencyCode = $0 }), options: InternationalOptions.currencies)
                 LabeledContent("Invoice Number", value: invoice.invoiceNumber)
                 DatePicker("Invoice Date", selection: Bindable(invoice).invoiceDate, displayedComponents: .date)
                 DatePicker("Due Date", selection: Bindable(invoice).dueDate, displayedComponents: .date)
             }
 
             Section("Business Details") {
+                TextField("Tax Registration Number (optional)", text: Binding(get: { invoice.businessTaxNumber ?? "" }, set: { invoice.businessTaxNumber = $0.isEmpty ? nil : $0 }))
+                TextField("Business Mobile Number", text: Binding(get: { invoice.businessPhone ?? "" }, set: { invoice.businessPhone = $0.isEmpty ? nil : $0 })).keyboardType(.phonePad)
                 TextField("Business Name", text: Bindable(invoice).businessName)
                 TextField("Business Email", text: Binding(
                     get: { invoice.businessEmail ?? "" },
@@ -46,6 +49,7 @@ struct InvoiceFormView: View {
             }
 
             Section("Client Details") {
+                TextField("Client Mobile Number", text: Binding(get: { invoice.clientPhone ?? "" }, set: { invoice.clientPhone = $0.isEmpty ? nil : $0 })).keyboardType(.phonePad)
                 TextField("Client Name", text: Bindable(invoice).clientName)
                 TextField("Client Email", text: Binding(
                     get: { invoice.clientEmail ?? "" },
@@ -68,12 +72,12 @@ struct InvoiceFormView: View {
                             VStack(alignment: .leading) {
                                 Text(item.itemDescription.isEmpty ? "Untitled item" : item.itemDescription)
                                     .foregroundStyle(.primary)
-                                Text("\(item.quantity, specifier: "%.2f") x \(CurrencyFormatter.formatCurrency(item.unitPrice))")
+                                Text("\(item.quantity, specifier: "%.2f") x \(CurrencyFormatter.formatCurrency(item.unitPrice, code: invoice.currencyCode))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Text(CurrencyFormatter.formatCurrency(item.total))
+                            Text(CurrencyFormatter.formatCurrency(item.total, code: invoice.currencyCode))
                                 .foregroundStyle(.primary)
                         }
                     }
@@ -114,11 +118,16 @@ struct InvoiceFormView: View {
 
             Section("Totals") {
                 let totals = invoice.totals
-                LabeledContent("Subtotal", value: CurrencyFormatter.formatCurrency(totals.subtotal))
-                LabeledContent("Discount", value: "-\(CurrencyFormatter.formatCurrency(totals.discount))")
-                LabeledContent("Tax", value: CurrencyFormatter.formatCurrency(totals.taxAmount))
-                LabeledContent("Grand Total", value: CurrencyFormatter.formatCurrency(totals.grandTotal))
+                LabeledContent("Subtotal", value: CurrencyFormatter.formatCurrency(totals.subtotal, code: invoice.currencyCode))
+                LabeledContent("Discount", value: "-\(CurrencyFormatter.formatCurrency(totals.discount, code: invoice.currencyCode))")
+                LabeledContent("Tax", value: CurrencyFormatter.formatCurrency(totals.taxAmount, code: invoice.currencyCode))
+                LabeledContent("Grand Total", value: CurrencyFormatter.formatCurrency(totals.grandTotal, code: invoice.currencyCode))
                     .font(.headline)
+            }
+
+            Section("Stamp & Signature") {
+                InvoiceImageField(title: "Digital Stamp", data: Bindable(invoice).stampData)
+                InvoiceImageField(title: "Digital Signature", data: Bindable(invoice).signatureData)
             }
 
             Section("Notes") {
@@ -147,14 +156,13 @@ struct InvoiceFormView: View {
             ToolbarItem(placement: .bottomBar) {
                 Button("Preview PDF") {
                     if validate() {
-                        saveInvoice()
-                        showingPreview = true
+                        if saveInvoice() { showingPreview = true }
                     }
                 }
             }
         }
         .sheet(isPresented: $showingLineItemSheet) {
-            LineItemEditorView(item: editingItem) { newItem in
+            LineItemEditorView(item: editingItem, currencyCode: invoice.currencyCode) { newItem in
                 if editingItem == nil {
                     newItem.invoice = invoice
                     invoice.items.append(newItem)
@@ -168,12 +176,15 @@ struct InvoiceFormView: View {
         }
         .onAppear {
             guard isNew, invoice.invoiceNumber.isEmpty else { return }
+            invoice.currencyCode = Locale.current.currency?.identifier ?? "USD"
             modelContext.insert(invoice)
             invoice.invoiceNumber = InvoiceNumberGenerator.generateInvoiceNumber(existingInvoices: allInvoices)
             if let profile = businessProfiles.first {
                 invoice.businessName = profile.businessName
                 invoice.businessEmail = profile.email
                 invoice.businessAddress = profile.address
+                invoice.businessPhone = (profile.phone?.trimmingCharacters(in: .whitespaces).hasPrefix("+") == true) ? profile.phone : [profile.callingCode, profile.phone].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+                invoice.businessTaxNumber = profile.taxNumber
             }
         }
     }
@@ -206,9 +217,11 @@ struct InvoiceFormView: View {
         return true
     }
 
-    private func saveInvoice() {
-        guard validate() else { return }
+    @discardableResult
+    private func saveInvoice() -> Bool {
+        guard validate() else { return false }
         invoice.updatedAt = .now
-        try? modelContext.save()
+        do { try modelContext.save(); return true }
+        catch { errorMessage = "Unable to save this invoice. Please try again."; return false }
     }
 }

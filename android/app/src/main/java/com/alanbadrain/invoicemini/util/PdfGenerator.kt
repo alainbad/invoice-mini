@@ -67,7 +67,9 @@ object PdfGenerator {
 
         val dateText = "Date: ${dateFormat.format(invoice.invoiceDateMillis)}   Due: ${dateFormat.format(invoice.dueDateMillis)}"
         canvas.drawText(dateText, MARGIN, y, smallGrayPaint)
-        y += 28f
+        y += 20f
+        invoice.currencyCode?.let { canvas.drawText("Currency: $it", MARGIN, y, smallGrayPaint); y += 20f }
+        y += 8f
 
         val columnWidth = (PAGE_WIDTH - MARGIN * 2 - 20f) / 2
         canvas.drawText("FROM", MARGIN, y, labelPaint)
@@ -77,12 +79,15 @@ object PdfGenerator {
         val fromLines = listOfNotNull(
             invoice.businessName.ifBlank { null },
             invoice.businessEmail?.ifBlank { null },
-            invoice.businessAddress?.ifBlank { null }
+            invoice.businessAddress?.ifBlank { null },
+            invoice.businessPhone?.ifBlank { null },
+            invoice.businessTaxNumber?.takeIf { it.isNotBlank() }?.let { "Tax registration: $it" }
         )
         val toLines = listOfNotNull(
             invoice.clientName.ifBlank { null },
             invoice.clientEmail?.ifBlank { null },
-            invoice.clientAddress?.ifBlank { null }
+            invoice.clientAddress?.ifBlank { null },
+            invoice.clientPhone?.ifBlank { null }
         )
         val maxLines = maxOf(fromLines.size, toLines.size)
         for (i in 0 until maxLines) {
@@ -117,8 +122,8 @@ object PdfGenerator {
             if (index % 2 == 1) canvas.drawRect(MARGIN, y, PAGE_WIDTH - MARGIN, y + 22f, altRowPaint)
             canvas.drawText(item.itemDescription, colDesc + 8f, y + 15f, bodyPaint)
             canvas.drawText("%.2f".format(item.quantity), colQty, y + 15f, bodyPaint)
-            canvas.drawText(CurrencyFormatter.format(item.unitPrice), colPrice, y + 15f, bodyPaint)
-            canvas.drawText(CurrencyFormatter.format(item.total), colTotal, y + 15f, bodyPaint)
+            canvas.drawText(CurrencyFormatter.format(item.unitPrice, invoice.currencyCode), colPrice, y + 15f, bodyPaint)
+            canvas.drawText(CurrencyFormatter.format(item.total, invoice.currencyCode), colTotal, y + 15f, bodyPaint)
             y += 22f
         }
         y += 16f
@@ -135,17 +140,17 @@ object PdfGenerator {
             y += if (bold) 22f else 18f
         }
 
-        drawTotalLine("Subtotal", CurrencyFormatter.format(totals.subtotal), false)
+        drawTotalLine("Subtotal", CurrencyFormatter.format(totals.subtotal, invoice.currencyCode), false)
         if (totals.discount > 0) {
             val label = if (discountType == DiscountType.PERCENTAGE)
                 "Discount (${"%.1f".format(invoice.discount)}%)" else "Discount"
-            drawTotalLine(label, "-${CurrencyFormatter.format(totals.discount)}", false)
+            drawTotalLine(label, "-${CurrencyFormatter.format(totals.discount, invoice.currencyCode)}", false)
         }
         if (invoice.taxRate > 0) {
-            drawTotalLine("Tax (${"%.1f".format(invoice.taxRate)}%)", CurrencyFormatter.format(totals.taxAmount), false)
+            drawTotalLine("Tax (${"%.1f".format(invoice.taxRate)}%)", CurrencyFormatter.format(totals.taxAmount, invoice.currencyCode), false)
         }
         y += 6f
-        drawTotalLine("Total", CurrencyFormatter.format(totals.grandTotal), true)
+        drawTotalLine("Total", CurrencyFormatter.format(totals.grandTotal, invoice.currencyCode), true)
 
         if (!invoice.notes.isNullOrBlank()) {
             y += 24f
@@ -154,6 +159,24 @@ object PdfGenerator {
             canvas.drawText(invoice.notes, MARGIN, y, bodyPaint)
         }
 
+        val images = listOf("Digital Stamp" to invoice.stampPath, "Digital Signature" to invoice.signaturePath)
+        if (images.any { it.second != null }) {
+            if (y + 150f > PAGE_HEIGHT - MARGIN) {
+                document.finishPage(page)
+                page = document.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, document.pages.size + 1).create())
+                canvas = page.canvas
+                y = MARGIN
+            }
+            images.forEachIndexed { index, (label, path) ->
+                loadBitmapFromUri(context, path)?.let { bitmap ->
+                    val x = MARGIN + index * 260f
+                    canvas.drawText(label, x, y + 24f, labelPaint)
+                    val scale = minOf(220f / bitmap.width, 90f / bitmap.height)
+                    canvas.drawBitmap(bitmap, null, RectF(x, y + 38f, x + bitmap.width * scale, y + 38f + bitmap.height * scale), null)
+                    bitmap.recycle()
+                }
+            }
+        }
         document.finishPage(page)
 
         return try {

@@ -63,16 +63,21 @@ enum PDFGenerator {
 
                 let dateText = "Date: \(dateFormatter.string(from: invoice.invoiceDate))   Due: \(dateFormatter.string(from: invoice.dueDate))"
                 dateText.draw(at: CGPoint(x: margin, y: y), withAttributes: smallGrayAttrs)
-                y += 28
+                y += 20
+                if let currency = invoice.currencyCode {
+                    "Currency: \(currency)".draw(at: CGPoint(x: margin, y: y), withAttributes: smallGrayAttrs)
+                    y += 20
+                }
+                y += 8
 
                 let columnWidth = (pageWidth - margin * 2 - 20) / 2
                 "FROM".draw(at: CGPoint(x: margin, y: y), withAttributes: labelAttrs)
                 "BILL TO".draw(at: CGPoint(x: margin + columnWidth + 20, y: y), withAttributes: labelAttrs)
                 y += 16
 
-                let fromLines = [invoice.businessName, invoice.businessEmail, invoice.businessAddress]
+                let fromLines = [invoice.businessName, invoice.businessEmail, invoice.businessAddress, invoice.businessPhone, invoice.businessTaxNumber.map { "Tax registration: \($0)" }]
                     .compactMap { $0 }.filter { !$0.isEmpty }
-                let toLines = [invoice.clientName, invoice.clientEmail, invoice.clientAddress]
+                let toLines = [invoice.clientName, invoice.clientEmail, invoice.clientAddress, invoice.clientPhone]
                     .compactMap { $0 }.filter { !$0.isEmpty }
 
                 let maxLines = max(fromLines.count, toLines.count)
@@ -118,9 +123,9 @@ enum PDFGenerator {
                     item.itemDescription.draw(at: CGPoint(x: colDesc + 8, y: y + 5), withAttributes: bodyAttrs)
                     String(format: "%.2f", item.quantity)
                         .draw(at: CGPoint(x: colQty, y: y + 5), withAttributes: bodyAttrs)
-                    CurrencyFormatter.formatCurrency(item.unitPrice)
+                    CurrencyFormatter.formatCurrency(item.unitPrice, code: invoice.currencyCode)
                         .draw(at: CGPoint(x: colPrice, y: y + 5), withAttributes: bodyAttrs)
-                    CurrencyFormatter.formatCurrency(item.total)
+                    CurrencyFormatter.formatCurrency(item.total, code: invoice.currencyCode)
                         .draw(at: CGPoint(x: colTotal, y: y + 5), withAttributes: bodyAttrs)
                     y += 22
                 }
@@ -137,21 +142,21 @@ enum PDFGenerator {
                     y += bold ? 22 : 18
                 }
 
-                drawTotalLine("Subtotal", CurrencyFormatter.formatCurrency(totals.subtotal))
+                drawTotalLine("Subtotal", CurrencyFormatter.formatCurrency(totals.subtotal, code: invoice.currencyCode))
                 if totals.discount > 0 {
                     let discountLabel = invoice.discountType == .percentage
                         ? "Discount (\(String(format: "%.1f", invoice.discount))%)"
                         : "Discount"
-                    drawTotalLine(discountLabel, "-\(CurrencyFormatter.formatCurrency(totals.discount))")
+                    drawTotalLine(discountLabel, "-\(CurrencyFormatter.formatCurrency(totals.discount, code: invoice.currencyCode))")
                 }
                 if invoice.taxRate > 0 {
                     drawTotalLine(
                         "Tax (\(String(format: "%.1f", invoice.taxRate))%)",
-                        CurrencyFormatter.formatCurrency(totals.taxAmount)
+                        CurrencyFormatter.formatCurrency(totals.taxAmount, code: invoice.currencyCode)
                     )
                 }
                 y += 6
-                drawTotalLine("Total", CurrencyFormatter.formatCurrency(totals.grandTotal), bold: true)
+                drawTotalLine("Total", CurrencyFormatter.formatCurrency(totals.grandTotal, code: invoice.currencyCode), bold: true)
 
                 if let notes = invoice.notes, !notes.isEmpty {
                     y += 24
@@ -161,6 +166,19 @@ enum PDFGenerator {
                         in: CGRect(x: margin, y: y, width: pageWidth - margin * 2, height: 100),
                         withAttributes: bodyAttrs
                     )
+                }
+                // Reserve the notes block before placing the uploaded images.
+                if let notes = invoice.notes, !notes.isEmpty { y += 100 }
+                let images: [(String, Data?)] = [("Digital Stamp", invoice.stampData), ("Digital Signature", invoice.signatureData)]
+                if images.contains(where: { $0.1 != nil }) {
+                    if y + 150 > pageHeight - margin { context.beginPage(); y = margin }
+                    for (index, entry) in images.enumerated() {
+                        guard let data = entry.1, let image = UIImage(data: data) else { continue }
+                        let x = margin + CGFloat(index) * 260
+                        entry.0.draw(at: CGPoint(x: x, y: y + 16), withAttributes: labelAttrs)
+                        let scale = min(220 / max(image.size.width, 1), 90 / max(image.size.height, 1))
+                        image.draw(in: CGRect(x: x, y: y + 38, width: image.size.width * scale, height: image.size.height * scale))
+                    }
                 }
             }
             return url

@@ -78,7 +78,7 @@ fun InvoiceRowCard(invoiceWithItems: InvoiceWithItems, modifier: Modifier = Modi
             Text(dateFormat.format(invoice.invoiceDateMillis), fontSize = 11.sp, color = Color.Gray)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(CurrencyFormatter.format(totals.grandTotal), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(CurrencyFormatter.format(totals.grandTotal, invoice.currencyCode), fontWeight = FontWeight.Bold, fontSize = 14.sp)
             StatusBadge(status)
         }
     }

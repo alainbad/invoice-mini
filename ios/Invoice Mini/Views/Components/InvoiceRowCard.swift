@@ -17,7 +17,7 @@ struct InvoiceRowCard: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
-                Text(CurrencyFormatter.formatCurrency(invoice.totals.grandTotal))
+                Text(CurrencyFormatter.formatCurrency(invoice.totals.grandTotal, code: invoice.currencyCode))
                     .font(.subheadline.bold())
                 StatusBadge(status: invoice.status)
             }

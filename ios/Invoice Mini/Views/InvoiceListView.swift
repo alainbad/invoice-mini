@@ -74,6 +74,11 @@ struct InvoiceListView: View {
             notes: invoice.notes,
             status: .draft
         )
+        copy.businessPhone = invoice.businessPhone
+        copy.clientPhone = invoice.clientPhone
+        copy.currencyCode = invoice.currencyCode
+        copy.stampData = invoice.stampData
+        copy.signatureData = invoice.signatureData
         modelContext.insert(copy)
         for item in invoice.items {
             let newItem = LineItem(
